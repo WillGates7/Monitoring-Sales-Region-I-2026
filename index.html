@@ -48,7 +48,7 @@
   }
 
   /* Tabs */
-  .tabs { display: flex; gap: 4px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); }
+  .tabs { display: flex; gap: 4px; padding: 16px 32px 0; border-bottom: 1px solid var(--border); position:relative; overflow:visible; }
   .tab {
     padding: 10px 22px; border-radius: 8px 8px 0 0; cursor: pointer;
     font-size: 13px; font-weight: 600; color: var(--muted);
@@ -164,7 +164,7 @@
     .charts-row { grid-template-columns: 1fr; }
     .topbar { padding: 12px 16px; }
     .content { padding: 16px; }
-    .tabs { padding: 12px 16px 0; overflow-x: auto; }
+    .tabs { padding: 12px 16px 0; overflow:visible; }
   }
 
   /* Product cards for Alokasi */
@@ -295,7 +295,7 @@
   @media (max-width: 900px) {
     .topbar { padding: 12px 16px; }
     .content { padding: 16px; }
-    .tabs { padding: 12px 16px 0; overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; }
+    .tabs { padding: 12px 16px 0; overflow:visible; white-space: nowrap; flex-wrap: nowrap; }
     .summary-grid   { grid-template-columns: 1fr 1fr; }
     .summary-grid-5 { grid-template-columns: 1fr 1fr; }
     .charts-row { grid-template-columns: 1fr; }
@@ -503,10 +503,129 @@
   padding: 2px 10px;
   border-radius: 12px;
 }
+
+/* ── Dropdown Nav ─────────────────────────────────────── */
+.tabs { display:flex; align-items:flex-end; gap:2px; position:relative; overflow:visible !important; }
+.nav-item { position:relative; display:inline-block; }
+.nav-item > .tab { display:flex; align-items:center; gap:6px; }
+.nav-item > .tab .nav-arrow { font-size:9px; color:var(--muted); transition:transform .2s; display:inline-block; }
+.nav-item.open > .tab .nav-arrow { transform:rotate(180deg); }
+.nav-dropdown {
+  display:none;
+  position:absolute;
+  top:100%;
+  left:0;
+  z-index:9000;
+  background:#1a1f32;
+  border:1px solid var(--border);
+  border-radius:0 8px 8px 8px;
+  min-width:210px;
+  overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+}
+.nav-item.open .nav-dropdown { display:block; }
+.nav-dropdown-item {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 16px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+  color:var(--muted);
+  border-bottom:1px solid rgba(46,51,73,0.5);
+  transition:background .15s, color .15s;
+  white-space:nowrap;
+}
+.nav-dropdown-item:last-child { border-bottom:none; }
+.nav-dropdown-item:hover { background:rgba(255,255,255,0.06); color:var(--text); }
+.nav-dropdown-item.active { color:var(--text); background:rgba(255,255,255,0.05); }
+.nav-dropdown-item .dd-icon { font-size:14px; width:20px; text-align:center; flex-shrink:0; }
+.nav-dropdown-item .dd-label { flex:1; }
+.tab.group-active { color:var(--text); background:var(--surface); border-color:var(--border); border-bottom-color:var(--surface); margin-bottom:-1px; }
+
+/* Active tab in dropdown group - highlight the group button */
+.tab.group-active { color:var(--text); background:var(--surface); border-color:var(--border); border-bottom-color:var(--surface); margin-bottom:-1px; }
+
 </style>
 </head>
 
 <body>
+
+<div id="login-overlay" style="position:fixed;inset:0;background:#0d1117;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:inherit">
+  <div style="background:#161b27;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,0.6)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#e30000,#b00000);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;margin-bottom:14px">PTM</div>
+      <div style="font-size:18px;font-weight:800;color:#f0f2f5;margin-bottom:4px">Monitoring Sales Region I</div>
+      <div style="font-size:12px;color:#6b7280">Wilayah Barat — Pertamina Lubricants</div>
+    </div>
+    <div id="login-error" style="display:none;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:8px 12px;margin-bottom:16px;font-size:12px;color:#f87171;text-align:center">
+      ❌ Username atau password salah
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:#9ca3af;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Username</label>
+      <input id="login-user" type="text" placeholder="Masukkan username" autocomplete="username"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;color:#f0f2f5;font-size:13px;outline:none;transition:border-color .2s"
+        onfocus="this.style.borderColor='#e30000'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:11px;font-weight:700;color:#9ca3af;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Password</label>
+      <div style="position:relative">
+        <input id="login-pass" type="password" placeholder="Masukkan password" autocomplete="current-password"
+          style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 40px 10px 14px;color:#f0f2f5;font-size:13px;outline:none;transition:border-color .2s"
+          onfocus="this.style.borderColor='#e30000'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"
+          onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button onclick="var i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password'"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px;padding:4px">👁</button>
+      </div>
+    </div>
+    <button onclick="doLogin()"
+      style="width:100%;background:linear-gradient(135deg,#e30000,#b00000);border:none;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.03em;transition:opacity .2s"
+      onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+      MASUK →
+    </button>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#374151">
+      © 2026 Pertamina Lubricants · Sales Region I
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var SESSION_KEY = 'ptpl_auth_r1';
+  var CORRECT_USER = 'ptplsr1';
+  var CORRECT_PASS = 'ptpl@2026';
+
+  function checkSession() {
+    return sessionStorage.getItem(SESSION_KEY) === '1';
+  }
+
+  function showDashboard() {
+    var overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function doLogin() {
+    var u = (document.getElementById('login-user').value || '').trim();
+    var p = (document.getElementById('login-pass').value || '');
+    if (u === CORRECT_USER && p === CORRECT_PASS) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      showDashboard();
+    } else {
+      var err = document.getElementById('login-error');
+      if (err) { err.style.display = 'block'; }
+      var passEl = document.getElementById('login-pass');
+      if (passEl) { passEl.value = ''; passEl.focus(); }
+    }
+  }
+
+  window.doLogin = doLogin;
+
+  if (checkSession()) { showDashboard(); }
+})();
+</script>
+
 
 <div class="topbar">
   <div class="logo-area">
@@ -521,14 +640,52 @@
 
 <div id="alert-banner-zone"></div>
 
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('overview')">Overview</button>
-  <button class="tab" onclick="switchTab('resume')">Resume</button>
-  <button class="tab" onclick="switchTab('alokasi')">Alokasi Prio</button>
-  <button class="tab" onclick="switchTab('vafive')">Sell In Juni</button>
-  <button class="tab" onclick="switchTab('sisoretail')">SI/SO Retail</button>
-  <button class="tab" onclick="switchTab('sisoindustri')">SI/SO Industri</button>
-  <button class="tab" onclick="switchTab('kpi')">KPI</button>
+<div class="tabs" id="main-tabs">
+
+  <!-- Overview -->
+  <button class="tab active" id="tab-overview" onclick="switchTab('overview')">Overview</button>
+
+  <!-- Monitoring Distribusi dropdown -->
+  <div class="nav-item" id="navgrp-distribusi">
+    <button class="tab" id="tab-grp-distribusi" onclick="toggleNavGroup('distribusi', event)">
+      📦 Monitoring Distribusi <span class="nav-arrow">▾</span>
+    </button>
+    <div class="nav-dropdown">
+      <div class="nav-dropdown-item" id="dd-resume" onclick="switchTabFromDD('resume','distribusi')">
+        <span class="dd-icon">🏭</span>
+        <span class="dd-label">Resume Alokasi</span>
+      </div>
+      <div class="nav-dropdown-item" id="dd-alokasi" onclick="switchTabFromDD('alokasi','distribusi')">
+        <span class="dd-icon">📋</span>
+        <span class="dd-label">Alokasi Prio</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monitoring Sales dropdown -->
+  <div class="nav-item" id="navgrp-sales">
+    <button class="tab" id="tab-grp-sales" onclick="toggleNavGroup('sales', event)">
+      📈 Monitoring Sales <span class="nav-arrow">▾</span>
+    </button>
+    <div class="nav-dropdown">
+      <div class="nav-dropdown-item" id="dd-vafive" onclick="switchTabFromDD('vafive','sales')">
+        <span class="dd-icon">📅</span>
+        <span class="dd-label">Sell In Juni</span>
+      </div>
+      <div class="nav-dropdown-item" id="dd-sisoretail" onclick="switchTabFromDD('sisoretail','sales')">
+        <span class="dd-icon">🛍️</span>
+        <span class="dd-label">SI/SO Retail</span>
+      </div>
+      <div class="nav-dropdown-item" id="dd-sisoindustri" onclick="switchTabFromDD('sisoindustri','sales')">
+        <span class="dd-icon">🏗️</span>
+        <span class="dd-label">SI/SO Industri</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI standalone -->
+  <button class="tab" id="tab-kpi" onclick="switchTab('kpi')">🎯 KPI</button>
+
 </div>
 
 <div class="content">
@@ -1022,12 +1179,99 @@ const monthChips = (pct) => MONTHS.slice(0,6).map((m,i) => {
 function makeCard(label, value, sub, cls) {
   return `<div class="sum-card"><div class="label">${label}</div><div class="value ${cls}">${value}</div><div class="sub">${sub}</div></div>`;
 }
-function switchTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('pane-'+id).classList.add('active');
+// Map tab → group
+var TAB_GROUP_MAP = {
+  resume: 'distribusi', alokasi: 'distribusi',
+  vafive: 'sales', sisoretail: 'sales', sisoindustri: 'sales'
+};
+// Active tab label per group
+var GROUP_ACTIVE_LABEL = {
+  distribusi: { resume: 'Resume Alokasi', alokasi: 'Alokasi Prio' },
+  sales: { vafive: 'Sell In Juni', sisoretail: 'SI/SO Retail', sisoindustri: 'SI/SO Industri' }
+};
+var GROUP_ICON = { distribusi: '📦', sales: '📈' };
+var _currentTab = 'overview';
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.classList.remove('open');
+  });
 }
+
+function toggleNavGroup(group, e) {
+  if (e) e.stopPropagation();
+  var item = document.getElementById('navgrp-' + group);
+  var wasOpen = item.classList.contains('open');
+  closeAllDropdowns();
+  if (!wasOpen) item.classList.add('open');
+}
+
+function switchTabFromDD(id, group) {
+  closeAllDropdowns();
+  // Mark all dropdown items inactive
+  document.querySelectorAll('.nav-dropdown-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var ddEl = document.getElementById('dd-' + id);
+  if (ddEl) ddEl.classList.add('active');
+
+  // Update group button label
+  var grpBtn = document.getElementById('tab-grp-' + group);
+  if (grpBtn) {
+    var label = (GROUP_ACTIVE_LABEL[group] && GROUP_ACTIVE_LABEL[group][id]) || id;
+    grpBtn.innerHTML = GROUP_ICON[group] + ' ' + label + ' <span class="nav-arrow">▾</span>';
+    grpBtn.classList.add('group-active');
+  }
+
+  // Deactivate all top-level tabs
+  document.querySelectorAll('.tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.classList.remove('group-active');
+  });
+  if (grpBtn) grpBtn.classList.add('group-active');
+
+  // Switch pane
+  document.querySelectorAll('.pane').forEach(function(p) { p.classList.remove('active'); });
+  var pane = document.getElementById('pane-' + id);
+  if (pane) pane.classList.add('active');
+  _currentTab = id;
+
+  // Trigger build functions
+  if (id === 'resume') { try { buildResume(); } catch(e) {} }
+  if (id === 'alokasi') { try { buildAlokasi(); applyAlokasiFilter(); } catch(e) {} }
+  if (id === 'vafive') { try { initVA05Dropdowns(); buildVA05(); } catch(e) {} }
+  if (id === 'sisoretail') { try { buildSISORetail(); } catch(e) {} }
+  if (id === 'sisoindustri') { try { buildSISOIndustri(); } catch(e) {} }
+}
+
+function switchTab(id) {
+  closeAllDropdowns();
+  // Reset group buttons
+  document.querySelectorAll('.tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.classList.remove('group-active');
+  });
+  // Re-label group buttons to default
+  var grpDist = document.getElementById('tab-grp-distribusi');
+  if (grpDist) grpDist.innerHTML = '📦 Monitoring Distribusi <span class="nav-arrow">▾</span>';
+  var grpSales = document.getElementById('tab-grp-sales');
+  if (grpSales) grpSales.innerHTML = '📈 Monitoring Sales <span class="nav-arrow">▾</span>';
+  document.querySelectorAll('.nav-dropdown-item').forEach(function(el) { el.classList.remove('active'); });
+
+  var btn = document.getElementById('tab-' + id);
+  if (btn) btn.classList.add('active');
+
+  document.querySelectorAll('.pane').forEach(function(p) { p.classList.remove('active'); });
+  var pane = document.getElementById('pane-' + id);
+  if (pane) pane.classList.add('active');
+  _currentTab = id;
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.nav-item')) closeAllDropdowns();
+});
+
 function filterTable(tblId, q) {
   const rows = document.querySelectorAll('#' + tblId + ' tbody tr');
   const lq = q.toLowerCase();
@@ -1130,7 +1374,7 @@ function buildOverview() {
           '<span style="font-size:11px;color:var(--muted);margin-left:10px">Sell In & Sell Out — Retail + Industri</span>' +
         '</div>' +
         '<div style="display:flex;gap:8px;align-items:center">' +
-          '<span style="font-size:10px;font-weight:700;color:#f87171;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.25);padding:3px 10px;border-radius:12px">⏰ Sisa ~7 hari kerja</span>' +
+          '<span style="font-size:10px;font-weight:700;color:#f87171;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.25);padding:3px 10px;border-radius:12px">⏰ Sisa 5 hari kerja</span>' +
           '<span style="font-size:10px;font-weight:700;color:#f97316;background:rgba(249,115,22,0.1);padding:3px 10px;border-radius:12px">📊 s.d. 23 Juni 2026</span>' +
         '</div>' +
       '</div>' +
@@ -1142,8 +1386,8 @@ function buildOverview() {
         '</div>' +
         '<div>' +
           '<div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">🎯 Proyeksi Akhir Juni</div>' +
-          '<div style="font-size:18px;font-weight:900;color:#facc15">2.113<span style="font-size:10px;font-weight:600;color:var(--muted)"> KL</span></div>' +
-          '<div style="font-size:11px;color:var(--muted)">Avg 96 KL/hari × 22 hari kerja</div>' +
+          '<div style="font-size:18px;font-weight:900;color:#facc15">2.017<span style="font-size:10px;font-weight:600;color:var(--muted)"> KL</span></div>' +
+          '<div style="font-size:11px;color:var(--muted)">Avg 96 KL/hari × 21 hari kerja</div>' +
         '</div>' +
         '<div>' +
           '<div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">⚡ Target Harian Tersisa</div>' +
@@ -3169,8 +3413,8 @@ function buildVA05Linear() {
           order: 0
         },
         {
-          label: 'Target Harian (169.7 KL)',
-          data: Array(30).fill(169.7),
+          label: 'Target Harian (177.8 KL)',
+          data: Array(30).fill(177.8),
           borderColor: '#f43f5e',
           backgroundColor: 'transparent',
           borderWidth: 1.5,
@@ -3224,12 +3468,18 @@ function buildVA05Linear() {
       (w2avg>0 ? '<span style="background:rgba(249,115,22,0.1);padding:2px 8px;border-radius:8px">Mg 2: <b style="color:#facc15">'+w2avg.toFixed(1)+' KL/hr</b></span>' : '') +
       (w3avg>0 ? '<span style="background:rgba(249,115,22,0.1);padding:2px 8px;border-radius:8px">Mg 3: <b style="color:#facc15">'+w3avg.toFixed(1)+' KL/hr</b></span>' : '') +
       (w4avg>0 ? '<span style="background:rgba(249,115,22,0.1);padding:2px 8px;border-radius:8px">Mg 4: <b style="color:#facc15">'+w4avg.toFixed(1)+' KL/hr</b></span>' : '') +
-      '<span style="background:rgba(244,63,94,0.1);padding:2px 8px;border-radius:8px;margin-left:auto">― <span style="color:#f43f5e;font-weight:700">Target: 169.7 KL/hari</span></span>' +
+      '<span style="background:rgba(244,63,94,0.1);padding:2px 8px;border-radius:8px;margin-left:auto">― <span style="color:#f43f5e;font-weight:700">Target: 177.8 KL/hari</span></span>' +
       '<span style="padding:2px 8px">Total: <b style="color:#facc15">'+(VA05_DAILY_T.reduce(function(s,v){return s+v;},0)).toFixed(1)+' KL</b> / 3.733,8 KL target bulan</span>';
   }
 }
 
 function round2(v) { return Math.round(v * 100) / 100; }
+
+
+// Hari libur nasional Juni 2026
+var LIBNAS_JUNI = {
+  1: 'Hari Lahir Pancasila'
+};
 
 function buildVA05() {
   var mode = (document.getElementById('va5-mode') || {}).value || 'all';
@@ -3275,15 +3525,20 @@ function buildVA05() {
     var isFuture = day > 23;
     var dow = (startDow + day - 1) % 7;
     var isWeekend = dow===0||dow===6;
+    var isLibnas = LIBNAS_JUNI.hasOwnProperty(day);
+    var isNonWorking = isWeekend || isLibnas;
 
     var cellStyle = 'min-height:80px;border-radius:6px;padding:6px;box-sizing:border-box;';
     if (hasData) {
       cellStyle += 'background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.25);cursor:pointer;';
-    } else if (isFuture) {
+    } else if (isFuture && !isNonWorking) {
       cellStyle += 'background:rgba(255,255,255,0.01);border:1px solid rgba(46,51,73,0.4);opacity:0.3;';
+    } else if (isLibnas) {
+      cellStyle += 'background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.3);';
+    } else if (isWeekend) {
+      cellStyle += 'background:rgba(255,255,255,0.015);border:1px solid rgba(46,51,73,0.5);opacity:0.45;';
     } else {
       cellStyle += 'background:rgba(255,255,255,0.02);border:1px solid var(--border);';
-      if (isWeekend) cellStyle += 'opacity:0.5;';
     }
 
     var topEntries = entries.slice(0,3);
@@ -3315,13 +3570,32 @@ function buildVA05() {
   var grandTotal2 = totalR2 + totalI2;
   var avgPerDay2 = daysCount > 0 ? (grandTotal2/daysCount).toFixed(1) : 0;
 
+  // Hitung hari kerja aktual Juni 2026 (excluding weekend + libnas)
+  var workingDaysJun = 0;
+  for (var wd=1; wd<=30; wd++) {
+    var wdDow = (1 + wd - 1) % 7; // startDow=1 (Senin)
+    var wdWeekend = wdDow===0||wdDow===6;
+    var wdLibnas = LIBNAS_JUNI.hasOwnProperty(wd);
+    if (!wdWeekend && !wdLibnas) workingDaysJun++;
+  }
+  var workingDaysLeft = 0;
+  for (var wl=24; wl<=30; wl++) {
+    var wlDow = (1 + wl - 1) % 7;
+    var wlWeekend = wlDow===0||wlDow===6;
+    var wlLibnas = LIBNAS_JUNI.hasOwnProperty(wl);
+    if (!wlWeekend && !wlLibnas) workingDaysLeft++;
+  }
+  var dailyTargetJun = workingDaysJun > 0 ? (3733.8 / workingDaysJun).toFixed(1) : 0;
+
   // Update stats in calendar header
   var statsEl = document.getElementById('va5-cal-stats');
   if (statsEl) {
     statsEl.innerHTML = '<b style="color:#facc15">Total: '+grandTotal2.toFixed(1)+' KL</b> · '+
       '<span style="color:#22c55e">R: '+totalR2.toFixed(1)+'</span> · '+
       '<span style="color:#3b82f6">I: '+totalI2.toFixed(1)+'</span> · '+
-      'Avg: <b>'+avgPerDay2+' KL/hari</b> ('+daysCount+' hari aktif)';
+      'Avg: <b>'+avgPerDay2+' KL/hari</b> · '+
+      '<span style="color:#f97316">'+daysCount+' hari aktif / '+workingDaysJun+' hari kerja</span> · '+
+      '<span style="color:#f87171;font-weight:700">Sisa '+workingDaysLeft+' hari kerja</span>';
   }
 
   cal.innerHTML =
@@ -3331,6 +3605,8 @@ function buildVA05() {
       '<span><span style="color:#22c55e">■</span> Retail ('+totalR2.toFixed(1)+' KL)</span>'+
       '<span><span style="color:#3b82f6">■</span> Industri ('+totalI2.toFixed(1)+' KL)</span>'+
       '<span><span style="color:#facc15">■</span> Total per hari</span>'+
+      '<span style="background:rgba(239,68,68,0.1);padding:1px 6px;border-radius:4px"><span style="color:#ef4444">■</span> Hari libur nasional</span>'+
+      '<span style="opacity:0.4">■ Weekend</span>'+
       '<span style="margin-left:auto">↑ Klik tanggal untuk detail</span>'+
     '</div>';
 
