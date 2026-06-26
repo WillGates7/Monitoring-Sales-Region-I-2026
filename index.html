@@ -875,7 +875,17 @@
       </div>
       <span style="font-size:11px;color:var(--muted)">Klik tanggal untuk lihat detail</span>
     </div>
-    <div id="va5-calendar" style="padding:16px"></div>
+    <!-- Week filter buttons -->
+    <div style="display:flex;align-items:center;gap:8px;padding:0 16px 12px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text-muted);font-weight:600">Filter Minggu:</span>
+      <button id="va5-wk-all" onclick="filterVA05Week('all')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">Semua</button>
+      <button id="va5-wk-1" onclick="filterVA05Week(1)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer">M1 · 1–7 Jun</button>
+      <button id="va5-wk-2" onclick="filterVA05Week(2)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer">M2 · 8–14 Jun</button>
+      <button id="va5-wk-3" onclick="filterVA05Week(3)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer">M3 · 15–21 Jun</button>
+      <button id="va5-wk-4" onclick="filterVA05Week(4)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer">M4 · 22–30 Jun</button>
+      <span id="va5-wk-summary" style="font-size:11px;color:var(--text-muted);margin-left:8px"></span>
+    </div>
+    <div id="va5-calendar" style="padding:0 16px 16px"></div>
   </div>
   <!-- Detail table for selected day -->
   <div id="va5-detail-section" style="display:none">
@@ -3419,6 +3429,59 @@ function initVA05Dropdowns() {
   });
 }
 
+function filterVA05Week(week) {
+  // Update button styles
+  var weeks = ['all',1,2,3,4];
+  weeks.forEach(function(w){
+    var btn = document.getElementById('va5-wk-'+(w==='all'?'all':w));
+    if (!btn) return;
+    var active = (w === week);
+    btn.style.background   = active ? 'var(--accent)' : 'transparent';
+    btn.style.color        = active ? '#fff' : 'var(--text)';
+    btn.style.borderColor  = active ? 'var(--accent)' : 'var(--border)';
+  });
+
+  // Week day ranges for Juni 2026
+  var ranges = { all:[1,30], 1:[1,7], 2:[8,14], 3:[15,21], 4:[22,30] };
+  var range = ranges[week] || ranges['all'];
+  var startDay = range[0], endDay = range[1];
+
+  // Filter VA05_DATA for this range
+  var weekData = VA05_DATA.filter(function(d){ return d.d >= startDay && d.d <= endDay; });
+  var totalR = weekData.reduce(function(s,d){ return s+d.r; }, 0);
+  var totalI = weekData.reduce(function(s,d){ return s+d.i; }, 0);
+  var daysWithData = weekData.filter(function(d){ return d.r+d.i > 0; }).length;
+
+  // Update summary badge
+  var sumEl = document.getElementById('va5-wk-summary');
+  if (sumEl) {
+    if (week === 'all') {
+      sumEl.textContent = '';
+    } else {
+      sumEl.innerHTML = '<span style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);padding:3px 10px;border-radius:10px">'
+        + daysWithData + ' hari transaksi · R: ' + totalR.toFixed(1) + ' KL · I: ' + totalI.toFixed(1) + ' KL · Total: ' + (totalR+totalI).toFixed(1) + ' KL'
+        + '</span>';
+    }
+  }
+
+  // Highlight/dim cells based on range
+  for (var d=1; d<=30; d++) {
+    var cell = document.getElementById('va5cell'+d);
+    if (!cell) continue;
+    if (week === 'all') {
+      cell.style.opacity = '';
+      cell.style.outline = '';
+    } else if (d >= startDay && d <= endDay) {
+      cell.style.opacity = '1';
+      cell.style.outline = '2px solid rgba(59,130,246,0.5)';
+    } else {
+      cell.style.opacity = '0.2';
+      cell.style.outline = '';
+    }
+  }
+}
+
+
 function buildVA05() {
   var mode = (document.getElementById('va5-mode') || {}).value || 'all';
   var tglVal = (document.getElementById('va5-tgl') || {}).value || 'all';
@@ -3492,7 +3555,7 @@ function buildVA05() {
     var indLine = (hasData && (mode==='all'||mode==='industri') && totalId>0) ? '<div style="font-size:8px;color:#3b82f6;font-weight:700">I: '+totalId.toFixed(1)+' KL</div>' : '';
     var moreLine = moreCount>0 ? '<div style="font-size:8px;color:var(--muted);margin-top:2px">+'+moreCount+' lainnya...</div>' : '';
 
-    cellsHtml += '<div id="'+cellId+'" style="'+cellStyle+'">'+
+    cellsHtml += '<div id="'+cellId+'" style="'+cellStyle+'"'+(hasData?' onclick="showVA05Detail('+day+',\''+mode+'\')"':'')+'>'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">'+dayNum+dayKL+'</div>'+
       retLine+indLine+entriesHtml+moreLine+
     '</div>';
