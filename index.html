@@ -964,8 +964,8 @@
       <table id="tbl-siso-retail">
         <thead><tr>
           <th>Plant</th><th>SAM</th><th>Distributor</th><th>Wilayah</th>
-          <th class="right">SI Target</th><th class="right">SI Real</th><th class="right">SI GAP</th><th>SI %</th>
-          <th class="right">SO Target</th><th class="right">SO Real</th><th class="right">SO GAP</th><th>SO %</th>
+          <th class="right">SI Target Sem I</th><th class="right">SI Real Sem I</th><th class="right">SI GAP</th><th>SI %</th>
+          <th class="right">SO Target Sem I</th><th class="right">SO Real Sem I</th><th class="right">SO GAP</th><th>SO %</th>
         </tr></thead>
         <tbody id="tbody-siso-retail"></tbody>
       </table>
@@ -1027,8 +1027,8 @@
       <table id="tbl-siso-ind">
         <thead><tr>
           <th>Plant</th><th>Position</th><th>Distributor</th>
-          <th class="right">SI Target</th><th class="right">SI Real</th><th class="right">SI GAP</th><th>SI %</th>
-          <th class="right">SO Target</th><th class="right">SO Real</th><th class="right">SO GAP</th><th>SO %</th>
+          <th class="right">SI Target Sem I</th><th class="right">SI Real Sem I</th><th class="right">SI GAP</th><th>SI %</th>
+          <th class="right">SO Target Sem I</th><th class="right">SO Real Sem I</th><th class="right">SO GAP</th><th>SO %</th>
         </tr></thead>
         <tbody id="tbody-siso-ind"></tbody>
       </table>
@@ -1367,8 +1367,8 @@ function buildOverview() {
 
   // ── Summary cards ───────────────────────────────────────────────────
   document.getElementById('overview-cards').innerHTML = [
-    makeCard('SI Retail YTD', fmt(retailTotal.real,1)+' KL', (retailPct).toFixed(1)+'% dari target 2026', retailPct>=50?'v-green':'v-red'),
-    makeCard('SI Industri YTD', fmt(industriTotal.real,1)+' KL', (industriPct).toFixed(1)+'% dari target 2026', industriPct>=50?'v-green':'v-red'),
+    makeCard('SI Retail YTD', fmt(retailTotal.real,1)+' KL', (retailPct).toFixed(1)+'% vs Target Sem I', retailPct>=50?'v-green':'v-red'),
+    makeCard('SI Industri YTD', fmt(industriTotal.real,1)+' KL', (industriPct).toFixed(1)+'% vs Target Sem I', industriPct>=50?'v-green':'v-red'),
     makeCard('% Achievement SI Total', overallPct.toFixed(1)+'%', 'Sell In Retail + Industri (Jan–Jun)', overallPct>=50?'v-green':'v-yellow'),
     makeCard('SI Juni 2026', fmt(totalSIJuni,1)+' KL', 's.d. 26 Juni · Retail + Industri', totalSIJuni>0?'v-blue':'v-red'),
     makeCard('GAP Keseluruhan', fmt(overallGap,1)+' KL', totalIndustriDist+' Dist Industri · '+totalTerritory+' Territory', 'v-red'),
@@ -3202,14 +3202,14 @@ function buildSISORetail() {
             <div class="sam-card-head">
               <h4>${s.sam}</h4>
               <div class="sam-kpi">
-                <div class="sam-kpi-item"><div class="kpi-label">SI Target</div><div class="kpi-val v-blue">${s.si_target_total.toFixed(1)} KL</div></div>
-                <div class="sam-kpi-item"><div class="kpi-label">SI Real</div><div class="kpi-val" style="color:${siC}">${s.si_real_total.toFixed(1)} KL</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SI Tgt Sem I</div><div class="kpi-val v-blue">${s.si_target_total.toFixed(1)} KL</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SI Real Sem I</div><div class="kpi-val" style="color:${siC}">${s.si_real_total.toFixed(1)} KL</div></div>
                 <div class="sam-kpi-item"><div class="kpi-label">SI GAP</div><div class="kpi-val" style="color:#f87171">${s.si_gap.toFixed(1)}</div></div>
                 <div class="sam-kpi-item"><div class="kpi-label">SI %</div><div class="kpi-val" style="color:${siC}">${(siP*100).toFixed(1)}%</div></div>
               </div>
               <div class="sam-kpi" style="margin-top:8px">
-                <div class="sam-kpi-item"><div class="kpi-label">SO Target</div><div class="kpi-val v-blue">${s.so_target_total.toFixed(1)} KL</div></div>
-                <div class="sam-kpi-item"><div class="kpi-label">SO Real</div><div class="kpi-val" style="color:${soC}">${s.so_real_total.toFixed(1)} KL</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SO Tgt Sem I</div><div class="kpi-val v-blue">${s.so_target_total.toFixed(1)} KL</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SO Real Sem I</div><div class="kpi-val" style="color:${soC}">${s.so_real_total.toFixed(1)} KL</div></div>
                 <div class="sam-kpi-item"><div class="kpi-label">SO %</div><div class="kpi-val" style="color:${soC}">${(soP*100).toFixed(1)}%</div></div>
               </div>
             </div>
@@ -3384,14 +3384,14 @@ function buildSISOIndustri() {
             <div class="sam-card-head">
               <h4>${s.sam}</h4>
               <div class="sam-kpi">
-                <div class="sam-kpi-item"><div class="kpi-label">SI Target</div><div class="kpi-val v-blue">${s.si_target_total.toFixed(1)}</div></div>
-                <div class="sam-kpi-item"><div class="kpi-label">SI Real</div><div class="kpi-val" style="color:${siC}">${s.si_real_total.toFixed(1)}</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SI Tgt Sem I</div><div class="kpi-val v-blue">${s.si_target_total.toFixed(1)}</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SI Real Sem I</div><div class="kpi-val" style="color:${siC}">${s.si_real_total.toFixed(1)}</div></div>
                 <div class="sam-kpi-item"><div class="kpi-label">SI GAP</div><div class="kpi-val" style="color:#f87171">${s.si_gap.toFixed(1)}</div></div>
                 <div class="sam-kpi-item"><div class="kpi-label">SI %</div><div class="kpi-val" style="color:${siC}">${(siP*100).toFixed(1)}%</div></div>
               </div>
               <div class="sam-kpi" style="margin-top:8px">
-                <div class="sam-kpi-item"><div class="kpi-label">SO Target</div><div class="kpi-val v-blue">${s.so_target_total.toFixed(1)}</div></div>
-                <div class="sam-kpi-item"><div class="kpi-label">SO Real</div><div class="kpi-val" style="color:${soC}">${s.so_real_total.toFixed(1)}</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SO Tgt Sem I</div><div class="kpi-val v-blue">${s.so_target_total.toFixed(1)}</div></div>
+                <div class="sam-kpi-item"><div class="kpi-label">SO Real Sem I</div><div class="kpi-val" style="color:${soC}">${s.so_real_total.toFixed(1)}</div></div>
                 <div class="sam-kpi-item"><div class="kpi-label">SO %</div><div class="kpi-val" style="color:${soC}">${(soP*100).toFixed(1)}%</div></div>
               </div>
             </div>
