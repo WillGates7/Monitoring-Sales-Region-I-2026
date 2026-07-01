@@ -582,6 +582,9 @@
       <div class="nav-dropdown-item" id="dd-sisoindustri" onclick="switchTabFromDD('sisoindustri','sales')">
         <span class="dd-icon">🏗️</span><span class="dd-label">SI/SO Industri</span>
       </div>
+      <div class="nav-dropdown-item" id="dd-monitordist" onclick="switchTabFromDD('monitordist','sales')">
+        <span class="dd-icon">📉</span><span class="dd-label">Monitoring Distributor</span>
+      </div>
       <div class="nav-dropdown-item" id="dd-pir" onclick="switchTabFromDD('pir','sales')">
         <span class="dd-icon">📊</span><span class="dd-label">Realisasi PIR</span>
       </div>
@@ -1190,6 +1193,116 @@
 </div>
 
 
+<!-- ======================== MONITORING DISTRIBUTOR ======================== -->
+<div class="pane" id="pane-monitordist">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div>
+      <div class="sec-title" style="margin-bottom:2px">Monitoring Distributor <span class="sec-sub">Trend Sell In & Sell Out per Distributor · Jan–Des 2026</span></div>
+      <div style="font-size:12px;color:var(--text-muted)">Pilih segmen dan distributor untuk melihat trend bulanan Target vs Realisasi</div>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:600">SEGMEN</label>
+        <select id="md-segmen" onchange="onMdSegmenChange()" style="width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:12px;cursor:pointer;outline:none">
+          <option value="retail">🛍️ Retail</option>
+          <option value="industri">🏗️ Industri</option>
+        </select>
+      </div>
+      <div id="md-territory-wrap">
+        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:600">TERRITORY (RETAIL)</label>
+        <select id="md-territory" onchange="onMdTerritoryChange()" style="width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:12px;cursor:pointer;outline:none">
+          <option value="ALL">Semua Territory</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:600">DISTRIBUTOR</label>
+        <select id="md-distributor" onchange="renderMonitorDist()" style="width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:12px;cursor:pointer;outline:none">
+          <option value="ALL">Pilih distributor...</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Distributor Info -->
+  <div id="md-info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px"></div>
+
+  <!-- Insight Cards (Avg + Trend) -->
+  <div id="md-insight-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px"></div>
+
+  <!-- View Mode Toggle -->
+  <div id="md-toggle-wrap" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--text-muted);font-weight:600">MODE TAMPILAN:</span>
+    <button id="md-mode-bulanan" onclick="setMdMode('bulanan')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer">📊 Bulanan</button>
+    <button id="md-mode-kumulatif" onclick="setMdMode('kumulatif')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer">📈 Kumulatif (YTD)</button>
+    <span style="font-size:10px;color:var(--text-muted);margin-left:auto">Bulanan: realisasi per bulan · Kumulatif: akumulasi Jan → berjalan</span>
+  </div>
+
+  <!-- Chart SI Trend -->
+  <div class="table-card" style="margin-bottom:16px">
+    <div class="table-header">
+      <h3 style="margin:0;font-size:13px">📈 Trend Sell In (KL) — Jan–Des 2026</h3>
+    </div>
+    <div style="padding:16px;height:320px;position:relative">
+      <canvas id="chart-md-si"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart SO Trend -->
+  <div class="table-card" style="margin-bottom:16px">
+    <div class="table-header">
+      <h3 style="margin:0;font-size:13px">📊 Trend Sell Out (KL) — Jan–Des 2026</h3>
+    </div>
+    <div style="padding:16px;height:320px;position:relative">
+      <canvas id="chart-md-so"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart Achievement % Bulanan -->
+  <div class="table-card" style="margin-bottom:16px">
+    <div class="table-header">
+      <h3 style="margin:0;font-size:13px">🎯 % Achievement Bulanan — SI vs SO</h3>
+    </div>
+    <div style="padding:16px;height:280px;position:relative">
+      <canvas id="chart-md-ach"></canvas>
+    </div>
+  </div>
+
+  <!-- Monthly Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3 style="margin:0;font-size:13px">📋 Rincian Bulanan</h3>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:1100px">
+        <thead>
+          <tr style="background:var(--card-hover);border-bottom:2px solid var(--border)">
+            <th style="padding:10px 8px;text-align:left;color:var(--text-muted);position:sticky;left:0;background:var(--card-hover);z-index:1">Metrik</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Jan</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Feb</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Mar</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Apr</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Mei</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Jun</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Jul</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Ags</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Sep</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Okt</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Nov</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted)">Des</th>
+            <th style="padding:10px 8px;text-align:right;color:var(--text-muted);border-left:2px solid var(--border)">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-md"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
 <!-- ======================== REALISASI PIR DISTRIBUTOR ======================== -->
 <div class="pane" id="pane-pir">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
@@ -1468,6 +1581,7 @@ function switchTab(id) {
     else if (id==='kpi') buildKPI();
     else if (id==='resume') { applyResumeFilter(); renderPrio(); }
     else if (id==='tracking') renderTracking();
+    else if (id==='monitordist') { onMdSegmenChange(); }
   } catch(e) { console.error('build error:', e); }
 }
 // Close dropdown on outside click
@@ -4259,6 +4373,394 @@ function initPIR() {
     var o = document.createElement('option');
     o.value = t; o.textContent = t.replace('TERRITORY ','').replace('INDUSTRY','Industri'); terrSel.appendChild(o);
   });
+}
+
+
+
+var _mdCharts = { si: null, so: null, ach: null };
+var _mdMode = 'bulanan'; // 'bulanan' or 'kumulatif'
+
+function setMdMode(mode) {
+  _mdMode = mode;
+  var b = document.getElementById('md-mode-bulanan');
+  var k = document.getElementById('md-mode-kumulatif');
+  if (mode === 'bulanan') {
+    b.style.background = 'var(--accent)'; b.style.color = '#fff'; b.style.borderColor = 'var(--accent)';
+    k.style.background = 'transparent';   k.style.color = 'var(--text)'; k.style.borderColor = 'var(--border)';
+  } else {
+    k.style.background = 'var(--accent)'; k.style.color = '#fff'; k.style.borderColor = 'var(--accent)';
+    b.style.background = 'transparent';   b.style.color = 'var(--text)'; b.style.borderColor = 'var(--border)';
+  }
+  renderMonitorDist();
+}
+
+function onMdSegmenChange() {
+  var seg = document.getElementById('md-segmen').value;
+  var terrWrap = document.getElementById('md-territory-wrap');
+  var terrSel = document.getElementById('md-territory');
+
+  if (seg === 'retail') {
+    terrWrap.style.display = '';
+    document.querySelector('#md-territory-wrap label').textContent = 'TERRITORY (RETAIL)';
+    var territories = Array.from(new Set(SISO_DATA.retail.map(function(r){return r.wilayah;}))).sort();
+    terrSel.innerHTML = '<option value="ALL">Semua Territory</option>' +
+      territories.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join('');
+    terrSel.value = 'ALL';
+  } else {
+    terrWrap.style.display = '';
+    document.querySelector('#md-territory-wrap label').textContent = 'SAM POSITION (INDUSTRI)';
+    var positions = Array.from(new Set(SISO_DATA.industri.map(function(r){return r.position;}))).sort();
+    terrSel.innerHTML = '<option value="ALL">Semua SAM</option>' +
+      positions.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('');
+    terrSel.value = 'ALL';
+  }
+  onMdTerritoryChange();
+}
+
+function onMdTerritoryChange() {
+  var seg = document.getElementById('md-segmen').value;
+  var terr = document.getElementById('md-territory').value;
+  var distSel = document.getElementById('md-distributor');
+
+  var rows;
+  if (seg === 'retail') {
+    rows = terr === 'ALL' ? SISO_DATA.retail : SISO_DATA.retail.filter(function(r){return r.wilayah === terr;});
+  } else {
+    rows = terr === 'ALL' ? SISO_DATA.industri : SISO_DATA.industri.filter(function(r){return r.position === terr;});
+  }
+
+  distSel.innerHTML = '<option value="ALL">Pilih distributor...</option>' +
+    rows.map(function(r,i){
+      var label = r.distributor + (seg==='retail' ? ' — ' + r.wilayah : ' — ' + r.plant);
+      return '<option value="'+i+'">'+label+'</option>';
+    }).join('');
+  distSel.value = 'ALL';
+  renderMonitorDist();
+}
+
+function _mdCumulative(arr) {
+  var out = []; var s = 0;
+  for (var i=0; i<arr.length; i++) { s += arr[i]; out.push(s); }
+  return out;
+}
+
+function _mdTrendSlope(realArr) {
+  // Simple % change: compare avg last 3 vs prev 3 (from months that have data)
+  var nonzero = realArr.filter(function(v){return v>0;});
+  if (nonzero.length < 2) return { pct: 0, dir: '→', color: 'var(--text-muted)' };
+  var half = Math.floor(nonzero.length/2);
+  if (half < 1) half = 1;
+  var early = nonzero.slice(0, half);
+  var late = nonzero.slice(-half);
+  var avgE = early.reduce(function(s,v){return s+v;},0)/early.length;
+  var avgL = late.reduce(function(s,v){return s+v;},0)/late.length;
+  if (avgE <= 0) return { pct: 0, dir: '→', color: 'var(--text-muted)' };
+  var pct = (avgL - avgE) / avgE * 100;
+  var dir = pct > 3 ? '↑' : (pct < -3 ? '↓' : '→');
+  var color = pct > 3 ? '#22c55e' : (pct < -3 ? '#ef4444' : 'var(--text-muted)');
+  return { pct: pct, dir: dir, color: color };
+}
+
+function renderMonitorDist() {
+  var seg = document.getElementById('md-segmen').value;
+  var terr = document.getElementById('md-territory').value;
+  var distIdx = document.getElementById('md-distributor').value;
+
+  var rows;
+  if (seg === 'retail') {
+    rows = terr === 'ALL' ? SISO_DATA.retail : SISO_DATA.retail.filter(function(r){return r.wilayah === terr;});
+  } else {
+    rows = terr === 'ALL' ? SISO_DATA.industri : SISO_DATA.industri.filter(function(r){return r.position === terr;});
+  }
+
+  var infoEl = document.getElementById('md-info-cards');
+  var insightEl = document.getElementById('md-insight-cards');
+  var tbody = document.getElementById('tbody-md');
+  var toggleEl = document.getElementById('md-toggle-wrap');
+
+  if (distIdx === 'ALL' || !rows[parseInt(distIdx)]) {
+    infoEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-muted);background:var(--card);border:1px dashed var(--border);border-radius:10px">👆 Pilih distributor untuk melihat trend</div>';
+    insightEl.innerHTML = '';
+    toggleEl.style.display = 'none';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:20px;color:var(--text-muted)">Belum ada distributor dipilih</td></tr>';
+    ['si','so','ach'].forEach(function(k){
+      if (_mdCharts[k]) { _mdCharts[k].destroy(); _mdCharts[k] = null; }
+    });
+    return;
+  }
+
+  toggleEl.style.display = 'flex';
+
+  var r = rows[parseInt(distIdx)];
+  var siTgt = r.si_target || [];
+  var siReal = r.si_real || [];
+  var soTgt = r.so_target || [];
+  var soReal = r.so_real || [];
+  var siTgtYear = siTgt.reduce(function(s,v){return s+v;},0);
+  var soTgtYear = soTgt.reduce(function(s,v){return s+v;},0);
+  var siRealYtd = r.si_real_total;
+  var soRealYtd = r.so_real_total;
+  var siTgtSemI = r.si_target_total;
+  var soTgtSemI = r.so_target_total;
+
+  // ── Info Cards ──
+  var cards = [
+    { label:'DISTRIBUTOR', val: r.distributor, sub: seg==='retail' ? r.wilayah : r.position, color:'var(--accent)', icon:'🏢' },
+    { label:'PLANT', val: r.plant, sub: seg==='retail' ? ('SAM: '+r.sam) : ('Plant: '+r.plant), color:'#3b82f6', icon:'📍' },
+    { label:'SI Target 2026', val: siTgtYear.toFixed(1)+' KL', sub: 'Sem I: '+siTgtSemI.toFixed(1)+' KL', color:'#8b5cf6', icon:'🎯' },
+    { label:'SI Realisasi YTD', val: siRealYtd.toFixed(1)+' KL', sub: (r.si_pct_total*100).toFixed(1)+'% vs Sem I', color: r.si_pct_total>=0.5?'#22c55e':'#ef4444', icon:'✅' },
+    { label:'SO Target 2026', val: soTgtYear.toFixed(1)+' KL', sub: 'Sem I: '+soTgtSemI.toFixed(1)+' KL', color:'#f59e0b', icon:'🎯' },
+    { label:'SO Realisasi YTD', val: soRealYtd.toFixed(1)+' KL', sub: (r.so_pct_total*100).toFixed(1)+'% vs Sem I', color: r.so_pct_total>=0.5?'#22c55e':'#ef4444', icon:'📦' },
+  ];
+  infoEl.innerHTML = cards.map(function(c){
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px">' +
+      '<div style="font-size:15px;margin-bottom:2px">'+c.icon+'</div>' +
+      '<div style="font-size:10px;color:var(--text-muted);font-weight:600">'+c.label+'</div>' +
+      '<div style="font-size:15px;font-weight:700;color:'+c.color+';margin-top:2px" title="'+c.val+'">'+c.val+'</div>' +
+      '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+c.sub+'</div>' +
+    '</div>';
+  }).join('');
+
+  // ── Insight Cards: Avg + Trend ──
+  var siNonzero = siReal.filter(function(v){return v>0;});
+  var soNonzero = soReal.filter(function(v){return v>0;});
+  var avgSi = siNonzero.length ? siRealYtd / siNonzero.length : 0;
+  var avgSo = soNonzero.length ? soRealYtd / soNonzero.length : 0;
+  var trendSi = _mdTrendSlope(siReal);
+  var trendSo = _mdTrendSlope(soReal);
+  var achSiOverall = siTgtYear > 0 ? (siRealYtd/siTgtYear*100) : 0;
+  var achSoOverall = soTgtYear > 0 ? (soRealYtd/soTgtYear*100) : 0;
+  var bestMonth = siReal.reduce(function(best, v, i){
+    if (v > best.v) return { v:v, i:i };
+    return best;
+  }, {v:0, i:-1});
+  var worstMonth = siReal.reduce(function(worst, v, i){
+    if (siTgt[i]>0 && (worst.i<0 || v < worst.v)) return { v:v, i:i };
+    return worst;
+  }, {v:0, i:-1});
+  var monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+
+  var insights = [
+    { label:'AVG SI/BULAN', val: avgSi.toFixed(1)+' KL', sub: siNonzero.length+' bulan aktif', color:'#8b5cf6', icon:'📊' },
+    { label:'TREND SI', val: trendSi.dir + ' ' + (trendSi.pct>0?'+':'') + trendSi.pct.toFixed(1)+'%', sub:'Perbandingan awal vs akhir', color: trendSi.color, icon:'📈' },
+    { label:'AVG SO/BULAN', val: avgSo.toFixed(1)+' KL', sub: soNonzero.length+' bulan aktif', color:'#f59e0b', icon:'📊' },
+    { label:'TREND SO', val: trendSo.dir + ' ' + (trendSo.pct>0?'+':'') + trendSo.pct.toFixed(1)+'%', sub:'Perbandingan awal vs akhir', color: trendSo.color, icon:'📈' },
+    { label:'BULAN TERBAIK SI', val: bestMonth.i>=0 ? monthNames[bestMonth.i] : '—', sub: bestMonth.i>=0 ? bestMonth.v.toFixed(1)+' KL' : 'Tidak ada data', color:'#22c55e', icon:'🏆' },
+    { label:'% ACHV YTD (vs Year)', val: achSiOverall.toFixed(1)+'% SI', sub: achSoOverall.toFixed(1)+'% SO · vs Target 2026', color: achSiOverall>=45?'#22c55e':'#ef4444', icon:'🎯' },
+  ];
+  insightEl.innerHTML = insights.map(function(c){
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px"><span style="font-size:15px">'+c.icon+'</span></div>' +
+      '<div style="font-size:10px;color:var(--text-muted);font-weight:600">'+c.label+'</div>' +
+      '<div style="font-size:16px;font-weight:700;color:'+c.color+';margin-top:2px">'+c.val+'</div>' +
+      '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+c.sub+'</div>' +
+    '</div>';
+  }).join('');
+
+  // ── Charts ──
+  var monthLabels = monthNames;
+  // Apply cumulative if mode is kumulatif
+  var chartSiTgt  = _mdMode === 'kumulatif' ? _mdCumulative(siTgt)  : siTgt;
+  var chartSiReal = _mdMode === 'kumulatif' ? _mdCumulative(siReal) : siReal;
+  var chartSoTgt  = _mdMode === 'kumulatif' ? _mdCumulative(soTgt)  : soTgt;
+  var chartSoReal = _mdMode === 'kumulatif' ? _mdCumulative(soReal) : soReal;
+  var modeSuffix = _mdMode === 'kumulatif' ? ' (Kumulatif)' : '';
+
+  setTimeout(function(){
+    if (typeof Chart === 'undefined') return;
+
+    // Plugin: draw % achievement above realisasi points (for SI/SO charts)
+    var _mdPctPlugin = {
+      id: 'mdPctLabels',
+      afterDatasetsDraw: function(chart) {
+        var opts = chart.options.plugins.mdPctLabels;
+        if (!opts || !opts.enabled) return;
+        var ctx = chart.ctx;
+        var meta = chart.getDatasetMeta(1); // line dataset = realisasi
+        if (!meta || meta.hidden) return;
+        var tgt = opts.targets || [];
+        var real = chart.data.datasets[1].data;
+        ctx.save();
+        ctx.font = 'bold 10px system-ui,-apple-system,sans-serif';
+        ctx.textAlign = 'center';
+        meta.data.forEach(function(pt, i){
+          var t = tgt[i]; var r = real[i];
+          if (!t || t <= 0 || r === null || r === undefined) return;
+          var pct = (r/t)*100;
+          var color = pct>=100 ? '#22c55e' : (pct>=50 ? '#f59e0b' : '#ef4444');
+          var text = pct.toFixed(0)+'%';
+          // Background pill
+          var w = ctx.measureText(text).width + 8;
+          var h = 14; var x = pt.x; var y = pt.y - 14;
+          ctx.fillStyle = 'rgba(15,17,24,0.85)';
+          ctx.beginPath();
+          if (ctx.roundRect) { ctx.roundRect(x - w/2, y - h/2, w, h, 6); } else { ctx.rect(x - w/2, y - h/2, w, h); }
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillStyle = color;
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, x, y);
+        });
+        ctx.restore();
+      }
+    };
+
+    // SI Chart
+    var ctxSi = document.getElementById('chart-md-si');
+    if (_mdCharts.si) { _mdCharts.si.destroy(); }
+    _mdCharts.si = new Chart(ctxSi, {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: [
+          { label:'Target SI'+modeSuffix, data: chartSiTgt.map(function(v){return Math.round(v*100)/100;}), backgroundColor:'rgba(139,92,246,0.35)', borderColor:'#8b5cf6', borderWidth:1, order:2 },
+          { label:'Realisasi SI'+modeSuffix, type:'line', data: chartSiReal.map(function(v){return Math.round(v*100)/100;}), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.2)', borderWidth:3, tension:0.3, pointRadius:5, pointBackgroundColor:'#22c55e', order:1, fill:false }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        layout: { padding: { top: 22 } },
+        plugins:{ legend:{ labels:{ color:'#e5e7eb', font:{size:11}, usePointStyle:true } },
+          tooltip:{ callbacks:{ label: function(ctx){
+            var t = chartSiTgt[ctx.dataIndex] || 0;
+            var pct = t>0 ? ' ('+(ctx.parsed.y/t*100).toFixed(1)+'%)' : '';
+            return ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+' KL'+(ctx.datasetIndex===1?pct:'');
+          } } },
+          mdPctLabels: { enabled: true, targets: chartSiTgt }
+        },
+        scales: {
+          y: { ticks:{ color:'#9ca3af', font:{size:10}, callback:function(v){return v+' KL';} }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          x: { ticks:{ color:'#9ca3af', font:{size:10} }, grid:{ display:false } }
+        }
+      },
+      plugins: [_mdPctPlugin]
+    });
+
+    // SO Chart
+    var ctxSo = document.getElementById('chart-md-so');
+    if (_mdCharts.so) { _mdCharts.so.destroy(); }
+    _mdCharts.so = new Chart(ctxSo, {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: [
+          { label:'Target SO'+modeSuffix, data: chartSoTgt.map(function(v){return Math.round(v*100)/100;}), backgroundColor:'rgba(245,158,11,0.35)', borderColor:'#f59e0b', borderWidth:1, order:2 },
+          { label:'Realisasi SO'+modeSuffix, type:'line', data: chartSoReal.map(function(v){return Math.round(v*100)/100;}), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.2)', borderWidth:3, tension:0.3, pointRadius:5, pointBackgroundColor:'#22c55e', order:1, fill:false }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        layout: { padding: { top: 22 } },
+        plugins:{ legend:{ labels:{ color:'#e5e7eb', font:{size:11}, usePointStyle:true } },
+          tooltip:{ callbacks:{ label: function(ctx){
+            var t = chartSoTgt[ctx.dataIndex] || 0;
+            var pct = t>0 ? ' ('+(ctx.parsed.y/t*100).toFixed(1)+'%)' : '';
+            return ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+' KL'+(ctx.datasetIndex===1?pct:'');
+          } } },
+          mdPctLabels: { enabled: true, targets: chartSoTgt }
+        },
+        scales: {
+          y: { ticks:{ color:'#9ca3af', font:{size:10}, callback:function(v){return v+' KL';} }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          x: { ticks:{ color:'#9ca3af', font:{size:10} }, grid:{ display:false } }
+        }
+      },
+      plugins: [_mdPctPlugin]
+    });
+
+    // ── Achievement Chart: % SI + % SO per bulan ──
+    var achSi = monthLabels.map(function(_, i){
+      return siTgt[i] > 0 ? Math.round(siReal[i]/siTgt[i]*1000)/10 : null;
+    });
+    var achSo = monthLabels.map(function(_, i){
+      return soTgt[i] > 0 ? Math.round(soReal[i]/soTgt[i]*1000)/10 : null;
+    });
+
+    var ctxAch = document.getElementById('chart-md-ach');
+    if (_mdCharts.ach) { _mdCharts.ach.destroy(); }
+    _mdCharts.ach = new Chart(ctxAch, {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: [
+          { label:'% Achievement SI', data: achSi,
+            backgroundColor: achSi.map(function(v){ return v===null?'rgba(107,114,128,0.2)': v>=100?'rgba(34,197,94,0.7)': v>=50?'rgba(245,158,11,0.7)':'rgba(239,68,68,0.7)'; }),
+            borderColor:'rgba(139,92,246,0.5)', borderWidth:1 },
+          { label:'% Achievement SO', data: achSo,
+            backgroundColor: achSo.map(function(v){ return v===null?'rgba(107,114,128,0.2)': v>=100?'rgba(34,197,94,0.7)': v>=50?'rgba(59,130,246,0.7)':'rgba(239,68,68,0.7)'; }),
+            borderColor:'rgba(59,130,246,0.5)', borderWidth:1 }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        layout: { padding: { top: 20 } },
+        plugins:{ legend:{ labels:{ color:'#e5e7eb', font:{size:11}, usePointStyle:true } },
+          tooltip:{ callbacks:{ label: function(ctx){ return ctx.dataset.label+': '+(ctx.parsed.y===null?'—':ctx.parsed.y.toFixed(1)+'%'); } } },
+          annotation:{ annotations:{ line100:{ type:'line', yMin:100, yMax:100, borderColor:'#22c55e', borderWidth:2, borderDash:[5,5] } } }
+        },
+        scales: {
+          y: { ticks:{ color:'#9ca3af', font:{size:10}, callback:function(v){return v+'%';} }, grid:{ color:'rgba(255,255,255,0.05)' } },
+          x: { ticks:{ color:'#9ca3af', font:{size:10} }, grid:{ display:false } }
+        }
+      },
+      plugins: [{
+        id: 'achBarLabels',
+        afterDatasetsDraw: function(chart) {
+          var ctx = chart.ctx;
+          chart.data.datasets.forEach(function(ds, di){
+            var meta = chart.getDatasetMeta(di);
+            if (meta.hidden) return;
+            meta.data.forEach(function(bar, i){
+              var v = ds.data[i];
+              if (v === null || v === undefined) return;
+              ctx.save();
+              ctx.font = 'bold 9px system-ui,-apple-system,sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillStyle = v>=100 ? '#22c55e' : (v>=50 ? '#f59e0b' : '#ef4444');
+              ctx.fillText(v.toFixed(0)+'%', bar.x, bar.y - 3);
+              ctx.restore();
+            });
+          });
+        }
+      }]
+    });
+  }, 50);
+
+  // ── Table ──
+  function pctColor(a, t) {
+    if (t <= 0) return 'var(--text-muted)';
+    var p = a/t;
+    return p>=1 ? '#22c55e' : p>=0.5 ? '#f59e0b' : '#ef4444';
+  }
+  function row(label, arr, color) {
+    var total = arr.reduce(function(s,v){return s+v;},0);
+    return '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;font-weight:600;color:'+(color||'var(--text)')+';position:sticky;left:0;background:var(--bg);z-index:1">'+label+'</td>' +
+      arr.map(function(v){ return '<td style="padding:8px 10px;text-align:right;color:'+(color||'var(--text)')+'">'+v.toFixed(2)+'</td>'; }).join('') +
+      '<td style="padding:8px 10px;text-align:right;font-weight:700;color:'+(color||'var(--text)')+';border-left:2px solid var(--border)">'+total.toFixed(2)+'</td>' +
+    '</tr>';
+  }
+  function pctRow(label, real, tgt) {
+    var totalReal = real.reduce(function(s,v){return s+v;},0);
+    var totalTgt = tgt.reduce(function(s,v){return s+v;},0);
+    return '<tr style="border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)">' +
+      '<td style="padding:8px 10px;font-weight:700;position:sticky;left:0;background:var(--card-hover);z-index:1">'+label+'</td>' +
+      real.map(function(v,i){
+        var t = tgt[i];
+        var pct = t>0 ? (v/t*100) : 0;
+        var c = pctColor(v, t);
+        return '<td style="padding:8px 10px;text-align:right;font-weight:600;color:'+c+'">'+(t>0?pct.toFixed(1)+'%':'—')+'</td>';
+      }).join('') +
+      '<td style="padding:8px 10px;text-align:right;font-weight:700;color:'+pctColor(totalReal,totalTgt)+';border-left:2px solid var(--border)">'+(totalTgt>0?(totalReal/totalTgt*100).toFixed(1)+'%':'—')+'</td>' +
+    '</tr>';
+  }
+
+  tbody.innerHTML =
+    row('Target SI', siTgt, '#8b5cf6') +
+    row('Realisasi SI', siReal, '#22c55e') +
+    pctRow('% Achievement SI', siReal, siTgt) +
+    row('Target SO', soTgt, '#f59e0b') +
+    row('Realisasi SO', soReal, '#22c55e') +
+    pctRow('% Achievement SO', soReal, soTgt);
 }
 
 function buildPIR() {
