@@ -3959,13 +3959,14 @@ function buildGapSem1(containerId, gapData, accentColor, samOnly) {
       acc.semI_target  += s.semI_target;
       acc.semI_real    += s.semI_real;
       acc.semI_gap     += s.semI_gap;
-      acc.semII_target += s.semII_target;
       return acc;
-    }, { semI_target:0, semI_real:0, semI_gap:0, semII_target:0 });
+    }, { semI_target:0, semI_real:0, semI_gap:0 });
   } else {
     t = { ...gapData.total };
   }
-  // Sem II realisasi & gap: aggregate from distributor-level records (updates monthly starting Jul)
+  // Sem II target/realisasi/gap: always aggregate fresh from distributor-level records —
+  // SAM-level semII_target may be missing/stale, distributor records are the source of truth.
+  t.semII_target = distList.reduce((s,d) => s + (d.semII_target||0), 0);
   t.semII_real = distList.reduce((s,d) => s + (d.semII_real||0), 0);
   t.semII_gap  = t.semII_target - t.semII_real;
   t.semII_pct  = t.semII_target > 0 ? (t.semII_real / t.semII_target * 100) : 0;
