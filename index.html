@@ -1197,6 +1197,7 @@
       </div>
     </div>
     <div class="summary-grid" id="outreg-cards" style="padding:16px;margin-bottom:0"></div>
+    <div id="outreg-chart-legend" style="padding:0 16px 8px"></div>
     <div style="padding:0 16px 8px">
       <div style="height:220px;position:relative">
         <canvas id="chart-outreg"></canvas>
@@ -1205,7 +1206,7 @@
     <div class="table-wrap">
       <table id="tbl-outreg">
         <thead><tr>
-          <th>#</th><th>Nama Distributor</th><th class="right">Volume 2024-YTD 2026 (KL)</th><th class="right">Bulan Aktif (dari 31)</th>
+          <th>#</th><th>Nama Distributor</th><th class="right">Volume 2024-YTD 2026 (KL)</th><th class="right">Rata-rata/Bulan (KL)</th><th class="right">Bulan Aktif (dari 31)</th>
         </tr></thead>
         <tbody id="tbody-outreg"></tbody>
       </table>
@@ -6123,9 +6124,16 @@ function buildOutsideRegion() {
     cardsEl.innerHTML = [
       makeCard('Total Distributor Terdeteksi', data.length+' distributor', pertaminaCount+' di antaranya Grup Pertamina', 'v-blue'),
       makeCard('Total Volume', totalKl.toFixed(1)+' KL', pertaminaKl.toFixed(1)+' KL dari Grup Pertamina', 'v-yellow'),
-      makeCard('Kontributor Terbesar', top1.name.length>22?top1.name.slice(0,22)+'…':top1.name, top1.total_kl.toFixed(1)+' KL', 'v-red'),
+      makeCard('Kontributor Terbesar', top1.name, top1.total_kl.toFixed(1)+' KL', 'v-red'),
       makeCard('Rata-rata Bulan Aktif', avgActive.toFixed(1)+' dari 31 bulan', 'seberapa rutin transaksi terjadi', 'v-green'),
     ].join('');
+  }
+
+  // Legend warna chart (biru = distributor luar biasa, kuning = grup Pertamina)
+  var legendEl = document.getElementById('outreg-chart-legend');
+  if (legendEl) {
+    legendEl.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;margin-right:16px;font-size:11px;color:var(--text-muted)"><span style="width:10px;height:10px;border-radius:2px;background:rgba(59,130,246,0.75);display:inline-block"></span>Distributor Luar Region I</span>'+
+      '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted)"><span style="width:10px;height:10px;border-radius:2px;background:rgba(250,204,21,0.8);display:inline-block"></span>Grup Pertamina (mungkin transaksi internal)</span>';
   }
 
   // Chart: Top 10 by volume
@@ -6172,17 +6180,58 @@ function buildOutsideRegion() {
 
   // Table
   var tbody = document.getElementById('tbody-outreg');
+  window._outregRowData = data;
   if (tbody) {
     tbody.innerHTML = data.map(function(e,i){
       var pertaminaBadge = e.isPertaminaGroup ? ' <span style="background:rgba(250,204,21,0.15);border:1px solid rgba(250,204,21,0.4);color:#facc15;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px">GRUP PERTAMINA</span>' : '';
-      return '<tr>'+
+      var avgPerMonth = e.months_active>0 ? (e.total_kl/e.months_active) : 0;
+      var rowId = 'outreg-detail-'+i;
+      var mainRow = '<tr onclick="toggleOutregDetail('+i+')" style="cursor:pointer">'+
         '<td style="color:var(--text-muted)">'+(i+1)+'</td>'+
-        '<td><b>'+e.name+'</b>'+pertaminaBadge+'</td>'+
+        '<td><b>'+e.name+'</b>'+pertaminaBadge+' <span id="'+rowId+'-arrow" style="font-size:9px;color:var(--text-muted)">\u25be lihat produk</span></td>'+
         '<td class="right" style="font-weight:800;color:#3b82f6">'+e.total_kl.toFixed(2)+'</td>'+
+        '<td class="right" style="color:#a855f7;font-weight:700">'+avgPerMonth.toFixed(2)+'</td>'+
         '<td class="right" style="color:var(--text-muted)">'+e.months_active+' / 31 bulan</td>'+
       '</tr>';
-    }).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">Tidak ada distributor ditemukan</td></tr>';
+      var detailRow = '<tr id="'+rowId+'" style="display:none;background:rgba(255,255,255,0.02)"><td colspan="5" style="padding:12px 16px 16px 40px" id="'+rowId+'-content"></td></tr>';
+      return mainRow + detailRow;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">Tidak ada distributor ditemukan</td></tr>';
   }
+}
+
+function toggleOutregDetail(idx) {
+  var rowId = 'outreg-detail-'+idx;
+  var entityName = (window._outregRowData && window._outregRowData[idx]) ? window._outregRowData[idx].name : null;
+  var row = document.getElementById(rowId);
+  var arrow = document.getElementById(rowId+'-arrow');
+  if (!row || !entityName) return;
+  var isOpen = row.style.display !== 'none';
+  if (isOpen) {
+    row.style.display = 'none';
+    if (arrow) arrow.textContent = '\u25be lihat produk';
+    return;
+  }
+  row.style.display = '';
+  if (arrow) arrow.textContent = '\u25b4 tutup produk';
+  var contentEl = document.getElementById(rowId+'-content');
+  if (!contentEl) return;
+  var products = (typeof PRODUCT_BY_ENTITY !== 'undefined' && PRODUCT_BY_ENTITY[entityName]) ? PRODUCT_BY_ENTITY[entityName] : [];
+  if (!products.length) {
+    contentEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Data produk tidak tersedia</div>';
+    return;
+  }
+  var maxKl = Math.max.apply(null, products.map(function(p){return p.kl;}));
+  var rankColors = ['#facc15','#94a3b8','#cd7f32','#8b5cf6','#3b82f6'];
+  contentEl.innerHTML = '<div style="font-size:10px;color:var(--text-muted);font-weight:700;margin-bottom:8px">\ud83c\udfc5 TOP 5 PRODUK (2024 s.d. YTD 2026)</div>' +
+    products.map(function(p,i){
+      var pct = maxKl>0 ? (p.kl/maxKl*100) : 0;
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'+
+        '<div style="width:18px;height:18px;border-radius:50%;background:'+rankColors[i]+'22;color:'+rankColors[i]+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">'+(i+1)+'</div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.produk+'</div>'+
+        '<div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-top:2px"><div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+rankColors[i]+'"></div></div></div>'+
+        '<div style="font-size:11px;font-weight:800;color:'+rankColors[i]+';flex-shrink:0;min-width:60px;text-align:right">'+p.kl.toFixed(1)+' KL</div>'+
+      '</div>';
+    }).join('');
 }
 
 function exportOutsideRegionCSV() {
