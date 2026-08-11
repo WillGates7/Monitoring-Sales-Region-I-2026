@@ -625,6 +625,51 @@
   </div>
 
   <div id="overview-highlight-section"></div>
+
+  <!-- ══════════ SI SO Jan-Jul Retail & Industri 2026 ══════════ -->
+  <div class="table-card" style="margin-top:24px">
+    <div class="table-header">
+      <h3 style="margin:0;font-size:14px">📊 SI/SO Jan–Jul Retail &amp; Industri 2026</h3>
+    </div>
+    <div style="padding:16px" id="ov-jj-summary-cards"></div>
+    <div style="padding:0 16px 16px">
+      <div style="height:280px;position:relative">
+        <canvas id="chart-ov-jj-summary"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ SI SO Jan-Jul per Distributor 2026 ══════════ -->
+  <div class="table-card" style="margin-top:16px">
+    <div class="table-header" style="flex-wrap:wrap;gap:10px">
+      <h3 style="margin:0;font-size:14px">📋 SI/SO Jan–Jul per Distributor 2026</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="ov-jj-search" type="text" placeholder="🔍 Cari distributor..." oninput="buildOverviewJanJulDetail()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-size:11px;outline:none;width:160px">
+        <select id="ov-jj-filter-segmen" onchange="buildOverviewJanJulDetail()" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-size:11px;cursor:pointer;outline:none">
+          <option value="ALL">Semua Segmen</option>
+          <option value="retail">Retail</option>
+          <option value="industri">Industri</option>
+        </select>
+        <button onclick="exportOverviewJanJulCSV()" style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);color:#3b82f6;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl-ov-jj">
+        <thead><tr>
+          <th onclick="sortOverviewJanJul('distributor')" style="cursor:pointer">Distributor ⇅</th>
+          <th>Segmen</th>
+          <th class="right" onclick="sortOverviewJanJul('si_target')" style="cursor:pointer">SI Target ⇅</th>
+          <th class="right" onclick="sortOverviewJanJul('si_real')" style="cursor:pointer">SI Real ⇅</th>
+          <th>SI %</th>
+          <th class="right" onclick="sortOverviewJanJul('so_target')" style="cursor:pointer">SO Target ⇅</th>
+          <th class="right" onclick="sortOverviewJanJul('so_real')" style="cursor:pointer">SO Real ⇅</th>
+          <th>SO %</th>
+        </tr></thead>
+        <tbody id="tbody-ov-jj"></tbody>
+      </table>
+    </div>
+    <div style="padding:8px 16px;font-size:10px;color:var(--text-muted);border-top:1px solid var(--border)" id="ov-jj-count"></div>
+  </div>
 </div>
 
 <!-- ============================== RESUME ============================== -->
@@ -1861,7 +1906,7 @@ function toggleNavGroup(grp, e) {
 // "forgot to register in the other function" bugs anymore.
 // ══════════════════════════════════════════════════════════════
 var TAB_INIT_MAP = {
-  overview:     function(){ buildOverview(); },
+  overview:     function(){ buildOverview(); try{buildOverviewJanJulSummary();}catch(e){console.error('ov-jj-summary:',e);} try{buildOverviewJanJulDetail();}catch(e){console.error('ov-jj-detail:',e);} },
   kpi:          function(){ buildKPI(); },
   resume:       function(){ applyResumeFilter(); renderPrio(); try{buildAlokasiVsPIR();}catch(e){console.error('avp:',e);} },
   alokasi:      function(){ buildAlokasi(); applyAlokasiFilter(); },
@@ -1936,6 +1981,174 @@ function destroyChart(id) {
 
 // ===== RESUME =====
 // ====================== OVERVIEW DASHBOARD ======================
+
+// ══════════════════════════════════════════════════════════════
+// SI/SO Jan–Jul Retail & Industri 2026 (Overview)
+// Periode Jan-Jul dipilih tetap (bukan ikut toggle activeMonth),
+// karena Juli sudah settled/lengkap sebagai basis perbandingan.
+// ══════════════════════════════════════════════════════════════
+var _ovJJSortField = null, _ovJJSortAsc = true;
+var _ovJJChart = null;
+
+function _ovJJSum(arr) { return (arr||[]).slice(0,7).reduce(function(a,b){return a+b;},0); }
+
+function buildOverviewJanJulSummary() {
+  if (typeof SISO_DATA === 'undefined') return;
+  var retail = SISO_DATA.retail, industri = SISO_DATA.industri;
+
+  var siTgtR = retail.reduce(function(s,r){return s+_ovJJSum(r.si_target);},0);
+  var siRealR = retail.reduce(function(s,r){return s+_ovJJSum(r.si_real);},0);
+  var soTgtR = retail.reduce(function(s,r){return s+_ovJJSum(r.so_target);},0);
+  var soRealR = retail.reduce(function(s,r){return s+_ovJJSum(r.so_real);},0);
+  var siTgtI = industri.reduce(function(s,r){return s+_ovJJSum(r.si_target);},0);
+  var siRealI = industri.reduce(function(s,r){return s+_ovJJSum(r.si_real);},0);
+  var soTgtI = industri.reduce(function(s,r){return s+_ovJJSum(r.so_target);},0);
+  var soRealI = industri.reduce(function(s,r){return s+_ovJJSum(r.so_real);},0);
+
+  var pctSiR = siTgtR>0?(siRealR/siTgtR*100):0, pctSoR = soTgtR>0?(soRealR/soTgtR*100):0;
+  var pctSiI = siTgtI>0?(siRealI/siTgtI*100):0, pctSoI = soTgtI>0?(soRealI/soTgtI*100):0;
+
+  var cardsEl = document.getElementById('ov-jj-summary-cards');
+  if (cardsEl) {
+    cardsEl.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">' +
+        '<div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:16px">' +
+          '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:10px">🛍️ RETAIL</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SI TARGET</div><div style="font-size:15px;font-weight:800;color:#3b82f6">'+fmt(siTgtR,1)+' KL</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SI REAL</div><div style="font-size:15px;font-weight:800;color:#22c55e">'+fmt(siRealR,1)+' KL <span style="font-size:10px;color:'+(pctSiR>=80?'#4ade80':pctSiR>=50?'#facc15':'#f87171')+'">('+pctSiR.toFixed(1)+'%)</span></div></div>' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SO TARGET</div><div style="font-size:15px;font-weight:800;color:#3b82f6">'+fmt(soTgtR,1)+' KL</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SO REAL</div><div style="font-size:15px;font-weight:800;color:#facc15">'+fmt(soRealR,1)+' KL <span style="font-size:10px;color:'+(pctSoR>=80?'#4ade80':pctSoR>=50?'#facc15':'#f87171')+'">('+pctSoR.toFixed(1)+'%)</span></div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.25);border-radius:12px;padding:16px">' +
+          '<div style="font-size:12px;font-weight:800;color:#60a5fa;margin-bottom:10px">🏗️ INDUSTRI</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SI TARGET</div><div style="font-size:15px;font-weight:800;color:#3b82f6">'+fmt(siTgtI,1)+' KL</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SI REAL</div><div style="font-size:15px;font-weight:800;color:#22c55e">'+fmt(siRealI,1)+' KL <span style="font-size:10px;color:'+(pctSiI>=80?'#4ade80':pctSiI>=50?'#facc15':'#f87171')+'">('+pctSiI.toFixed(1)+'%)</span></div></div>' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SO TARGET</div><div style="font-size:15px;font-weight:800;color:#3b82f6">'+fmt(soTgtI,1)+' KL</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text-muted)">SO REAL</div><div style="font-size:15px;font-weight:800;color:#facc15">'+fmt(soRealI,1)+' KL <span style="font-size:10px;color:'+(pctSoI>=80?'#4ade80':pctSoI>=50?'#facc15':'#f87171')+'">('+pctSoI.toFixed(1)+'%)</span></div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  var ctx = document.getElementById('chart-ov-jj-summary');
+  if (ctx && typeof Chart !== 'undefined') {
+    if (_ovJJChart) { _ovJJChart.destroy(); _ovJJChart = null; }
+    _ovJJChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['SI Retail','SI Industri','SO Retail','SO Industri'],
+        datasets: [
+          { label:'Target', data:[siTgtR,siTgtI,soTgtR,soTgtI], backgroundColor:'rgba(59,130,246,0.55)', borderRadius:4 },
+          { label:'Realisasi', data:[siRealR,siRealI,soRealR,soRealI], backgroundColor:'rgba(34,197,94,0.75)', borderRadius:4 },
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ top:20 } },
+        plugins:{ legend:{ labels:{ color:'#9ca3af', font:{size:10} } } },
+        scales:{
+          x:{ ticks:{ color:'#9ca3af', font:{size:10} }, grid:{ display:false } },
+          y:{ ticks:{ color:'#9ca3af', font:{size:10}, callback:function(v){return v+' KL';} }, grid:{ color:'rgba(255,255,255,0.05)' } }
+        }
+      },
+      plugins: [{
+        id: 'ovJJValLbl',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          ctx.save();
+          ctx.font = 'bold 9px Segoe UI,sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+          chart.data.datasets.forEach((ds,di) => {
+            const meta = chart.getDatasetMeta(di);
+            meta.data.forEach((bar,i) => {
+              var v = ds.data[i];
+              if (!v) return;
+              ctx.fillStyle = di===0 ? '#93c5fd' : '#86efac';
+              ctx.fillText(v.toFixed(0), bar.x, bar.y-3);
+            });
+          });
+          ctx.restore();
+        }
+      }]
+    });
+  }
+}
+
+function sortOverviewJanJul(field) {
+  if (_ovJJSortField === field) { _ovJJSortAsc = !_ovJJSortAsc; }
+  else { _ovJJSortField = field; _ovJJSortAsc = false; }
+  buildOverviewJanJulDetail();
+}
+
+function buildOverviewJanJulDetail() {
+  if (typeof SISO_DATA === 'undefined') return;
+  var segVal = (document.getElementById('ov-jj-filter-segmen')||{}).value || 'ALL';
+  var searchVal = ((document.getElementById('ov-jj-search')||{}).value || '').toLowerCase().trim();
+
+  var rows = [];
+  SISO_DATA.retail.forEach(function(r){
+    rows.push({ distributor:r.distributor, segmen:'retail', si_target:_ovJJSum(r.si_target), si_real:_ovJJSum(r.si_real), so_target:_ovJJSum(r.so_target), so_real:_ovJJSum(r.so_real) });
+  });
+  SISO_DATA.industri.forEach(function(r){
+    rows.push({ distributor:r.distributor, segmen:'industri', si_target:_ovJJSum(r.si_target), si_real:_ovJJSum(r.si_real), so_target:_ovJJSum(r.so_target), so_real:_ovJJSum(r.so_real) });
+  });
+
+  if (segVal !== 'ALL') rows = rows.filter(function(r){ return r.segmen === segVal; });
+  if (searchVal) rows = rows.filter(function(r){ return r.distributor.toLowerCase().indexOf(searchVal) !== -1; });
+
+  if (_ovJJSortField) {
+    var f = _ovJJSortField, asc = _ovJJSortAsc;
+    rows.sort(function(a,b){
+      var av = a[f], bv = b[f];
+      if (typeof av === 'string') return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      return asc ? av-bv : bv-av;
+    });
+  }
+
+  var tbody = document.getElementById('tbody-ov-jj');
+  if (tbody) {
+    tbody.innerHTML = rows.map(function(r){
+      var pctSi = r.si_target>0 ? (r.si_real/r.si_target*100) : 0;
+      var pctSo = r.so_target>0 ? (r.so_real/r.so_target*100) : 0;
+      var segBadge = r.segmen==='retail' ? '<span class="chip chip-dsp">Retail</span>' : '<span class="chip chip-d2d">Industri</span>';
+      return '<tr>'+
+        '<td><b>'+r.distributor+'</b></td>'+
+        '<td>'+segBadge+'</td>'+
+        '<td class="right">'+r.si_target.toFixed(1)+'</td>'+
+        '<td class="right"><b>'+r.si_real.toFixed(1)+'</b></td>'+
+        '<td>'+pctBar(pctSi/100)+'</td>'+
+        '<td class="right">'+r.so_target.toFixed(1)+'</td>'+
+        '<td class="right"><b>'+r.so_real.toFixed(1)+'</b></td>'+
+        '<td>'+pctBar(pctSo/100)+'</td>'+
+      '</tr>';
+    }).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">Tidak ada distributor ditemukan</td></tr>';
+  }
+
+  var countEl = document.getElementById('ov-jj-count');
+  if (countEl) countEl.textContent = 'Menampilkan '+rows.length+' dari '+(SISO_DATA.retail.length+SISO_DATA.industri.length)+' distributor · Periode Jan–Jul 2026';
+}
+
+function exportOverviewJanJulCSV() {
+  if (typeof SISO_DATA === 'undefined') return;
+  var rows = [['Distributor','Segmen','SI Target (KL)','SI Real (KL)','SI %','SO Target (KL)','SO Real (KL)','SO %']];
+  SISO_DATA.retail.concat(SISO_DATA.industri.map(function(r){ return Object.assign({}, r, {_isInd:true}); })).forEach(function(r){
+    var seg = r._isInd ? 'Industri' : 'Retail';
+    var siT=_ovJJSum(r.si_target), siR=_ovJJSum(r.si_real), soT=_ovJJSum(r.so_target), soR=_ovJJSum(r.so_real);
+    var pctSi = siT>0?(siR/siT*100):0, pctSo = soT>0?(soR/soT*100):0;
+    rows.push([r.distributor, seg, siT.toFixed(2), siR.toFixed(2), pctSi.toFixed(1)+'%', soT.toFixed(2), soR.toFixed(2), pctSo.toFixed(1)+'%']);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'SISO_JanJul2026_per_Distributor.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function buildOverview() {
   const container = document.getElementById('pane-overview');
   if (!container) return;
@@ -6661,6 +6874,8 @@ try { initVA05Dropdowns(); buildVA05(); } catch(e) { console.error('buildVA05:',
 try { buildSIHistorical(); } catch(e) { console.error('buildSIHistorical:', e); }
 try { buildOutsideRegion(); } catch(e) { console.error('buildOutsideRegion:', e); }
 try { buildOverview(); } catch(e) { console.error('buildOverview:', e); }
+try { buildOverviewJanJulSummary(); } catch(e) { console.error('ov-jj-summary bootstrap:', e); }
+try { buildOverviewJanJulDetail(); } catch(e) { console.error('ov-jj-detail bootstrap:', e); }
 try {
   var _dataBadgeEl = document.getElementById('topbar-data-badge');
   if (_dataBadgeEl) {
