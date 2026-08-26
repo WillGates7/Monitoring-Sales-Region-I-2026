@@ -1493,6 +1493,7 @@
     <a href="#md-anchor-siso" onclick="return _mdScrollTo('md-anchor-siso')" style="font-size:11px;color:#22c55e;text-decoration:none;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);padding:5px 12px;border-radius:20px;font-weight:600">📈 SI/SO 2026</a>
     <a href="#md-anchor-achievement" onclick="return _mdScrollTo('md-anchor-achievement')" style="font-size:11px;color:#facc15;text-decoration:none;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);padding:5px 12px;border-radius:20px;font-weight:600">🎯 Achievement</a>
     <a href="#md-anchor-table" onclick="return _mdScrollTo('md-anchor-table')" style="font-size:11px;color:#3b82f6;text-decoration:none;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);padding:5px 12px;border-radius:20px;font-weight:600">📋 Tabel Bulanan</a>
+    <a href="#md-anchor-kpi" onclick="return _mdScrollTo('md-anchor-kpi')" style="font-size:11px;color:#ec4899;text-decoration:none;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.3);padding:5px 12px;border-radius:20px;font-weight:600">🎯 KPI</a>
   </div>
 
   <!-- Distributor Info -->
@@ -1500,6 +1501,16 @@
 
   <!-- Insight Cards (Avg + Trend) -->
   <div id="md-insight-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px"></div>
+
+  <!-- KPI Distributor -->
+  <div class="table-card" style="margin-bottom:16px" id="md-anchor-kpi">
+    <div class="table-header">
+      <h3 style="margin:0;font-size:13px">🎯 KPI Distributor</h3>
+      <div style="font-size:11px;color:var(--text-muted)" id="md-kpi-subtitle"></div>
+    </div>
+    <div style="padding:16px" id="md-kpi-cards"></div>
+    <div style="padding:0 16px 16px" id="md-kpi-monthly"></div>
+  </div>
 
   <!-- Detail Bulan Spesifik -->
   <div id="md-detail-bulan-wrap" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:20px">
@@ -1724,7 +1735,7 @@
     <div class="table-header"><h3 id="kpi-table-title">Detail KPI per Distributor</h3><button onclick="exportTableCSV('tbl-kpi','KPI')" style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);color:#3b82f6;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">⬇ CSV</button></div>
     <div class="table-wrap">
       <table id="tbl-kpi">
-        <thead><tr>
+        <thead id="thead-kpi"><tr>
           <th>SAM/Position</th><th>Distributor</th><th>Territory</th>
           <th class="right">Jan</th><th class="right">Feb</th><th class="right">Mar</th>
           <th class="right">Apr</th><th class="right">May</th><th class="right">Jun</th>
@@ -5795,6 +5806,54 @@ function _mdTrendSlope(realArr) {
   return { pct: pct, dir: dir, color: color };
 }
 
+function _mdBuildKPISection(r, seg) {
+  var cardsEl = document.getElementById('md-kpi-cards');
+  var monthlyEl = document.getElementById('md-kpi-monthly');
+  var subEl = document.getElementById('md-kpi-subtitle');
+  if (!cardsEl || !monthlyEl) return;
+
+  var kpiPool = seg === 'retail' ? KPI_DATA.ret : KPI_DATA.ind;
+  var kpiRow = kpiPool.find(function(k){ return k.sh_code === r.sh; });
+
+  if (!kpiRow) {
+    cardsEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);background:rgba(255,255,255,0.02);border-radius:8px">Data KPI tidak ditemukan untuk distributor ini</div>';
+    monthlyEl.innerHTML = '';
+    if (subEl) subEl.textContent = '';
+    return;
+  }
+
+  var monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  var lastIdx = 0;
+  (kpiRow.monthly||[]).forEach(function(v,i){ if (v>0 && i>lastIdx) lastIdx=i; });
+  var periodLabel = 'Jan–' + monthNames[lastIdx] + ' 2026';
+  var validVals = (kpiRow.monthly||[]).slice(0,lastIdx+1).filter(function(v){return v>0;});
+  var avgRecalc = validVals.length ? validVals.reduce(function(a,b){return a+b;},0)/validVals.length : 0;
+  var lastVal = kpiRow.monthly[lastIdx] || 0;
+  var prevVal = lastIdx>=1 ? (kpiRow.monthly[lastIdx-1]||0) : 0;
+  var delta = lastVal - prevVal;
+  var pctC = function(p){ return p>=0.8?'#22c55e':p>=0.5?'#facc15':'#f87171'; };
+
+  if (subEl) subEl.textContent = periodLabel + ' · SH Code: ' + kpiRow.sh_code;
+
+  cardsEl.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">' +
+      makeCard('Avg KPI', (avgRecalc*100).toFixed(1)+'%', periodLabel, avgRecalc>=0.8?'v-green':avgRecalc>=0.5?'v-yellow':'v-red') +
+      makeCard('KPI Bulan Terakhir ('+monthNames[lastIdx]+')', (lastVal*100).toFixed(1)+'%', lastVal>=0.8?'Good':lastVal>=0.5?'Medium':'Perlu perhatian', lastVal>=0.8?'v-green':lastVal>=0.5?'v-yellow':'v-red') +
+      makeCard('Perubahan vs Bulan Lalu', (delta>=0?'▲ ':'▼ ')+Math.abs(delta*100).toFixed(1)+'%', lastIdx>=1?monthNames[lastIdx-1]+' → '+monthNames[lastIdx]:'-', delta>=0?'v-green':'v-red') +
+    '</div>';
+
+  monthlyEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted);font-weight:700;margin-bottom:8px">RINCIAN BULANAN</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    monthNames.slice(0,lastIdx+1).map(function(m,i){
+      var v = kpiRow.monthly[i] || 0;
+      return '<div style="flex:1;min-width:60px;text-align:center;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 4px">' +
+        '<div style="font-size:9px;color:var(--text-muted);font-weight:600">'+m+'</div>' +
+        '<div style="font-size:13px;font-weight:800;color:'+pctC(v)+';margin-top:2px">'+(v>0?(v*100).toFixed(0)+'%':'-')+'</div>' +
+      '</div>';
+    }).join('') +
+    '</div>';
+}
+
 function renderMonitorDist() {
   var seg = document.getElementById('md-segmen').value;
   var terr = document.getElementById('md-territory').value;
@@ -5865,6 +5924,8 @@ function renderMonitorDist() {
       '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+c.sub+'</div>' +
     '</div>';
   }).join('');
+
+  try { _mdBuildKPISection(r, seg); } catch(e) { console.error('md-kpi:', e); }
 
   // ── Insight Cards: Avg + Trend ──
   var siNonzero = siReal.filter(function(v){return v>0;});
@@ -6778,30 +6839,42 @@ function buildKPI() {
   const nameKey = mode === 'retail' ? 'territory' : 'distributor';
   const pctC = p => p>=0.8?'#22c55e':p>=0.5?'#facc15':'#f87171';
 
-  const avgs = data.map(r=>r.avg);
-  const above80 = data.filter(r=>r.avg>=0.8).length;
-  const mid = data.filter(r=>r.avg>=0.5&&r.avg<0.8).length;
-  const below50 = data.filter(r=>r.avg<0.5).length;
-  const overallAvg = data.length ? data.reduce((s,r)=>s+r.avg,0)/data.length : 0;
+  // Hitung periode data KPI yang benar-benar terisi secara DINAMIS
+  // (bukan hardcode Jan-Jun) dan rata-rata yang lebih bermakna (bukan
+  // dibagi 12 seperti kolom "AVG 2026" bawaan Excel).
+  var _kpiLastIdx = 0;
+  data.forEach(function(r){ (r.monthly||[]).forEach(function(v,i){ if (v>0 && i>_kpiLastIdx) _kpiLastIdx=i; }); });
+  var _kpiMonthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  var _kpiPeriodLabel = 'Jan–' + _kpiMonthNames[_kpiLastIdx] + ' 2026';
+  data.forEach(function(r){
+    var vals = (r.monthly||[]).slice(0, _kpiLastIdx+1).filter(function(v){return v>0;});
+    r._avgRecalc = vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : 0;
+  });
+
+  const avgs = data.map(r=>r._avgRecalc);
+  const above80 = data.filter(r=>r._avgRecalc>=0.8).length;
+  const mid = data.filter(r=>r._avgRecalc>=0.5&&r._avgRecalc<0.8).length;
+  const below50 = data.filter(r=>r._avgRecalc<0.5).length;
+  const overallAvg = data.length ? data.reduce((s,r)=>s+r._avgRecalc,0)/data.length : 0;
 
   document.getElementById('kpi-cards').innerHTML = [
     makeCard(mode==='retail'?'Total Territory':'Total Distributor', data.length, mode==='retail'?'Retail aktif':'Industri aktif', 'v-blue'),
-    makeCard('Avg KPI 2026', (overallAvg*100).toFixed(1)+'%', 'Jan–Jun rata-rata', overallAvg>=0.8?'v-green':overallAvg>=0.5?'v-yellow':'v-red'),
+    makeCard('Avg KPI 2026', (overallAvg*100).toFixed(1)+'%', _kpiPeriodLabel+' rata-rata', overallAvg>=0.8?'v-green':overallAvg>=0.5?'v-yellow':'v-red', 'Dihitung dari rata-rata bulan yang sudah ada datanya saja (bukan dibagi 12 seperti kolom bawaan Excel)'),
     makeCard('≥ 80% (Good)', above80, `${(above80/data.length*100).toFixed(0)}% dari total`, 'v-green'),
     makeCard('50–79% (Medium)', mid, `${(mid/data.length*100).toFixed(0)}% dari total`, 'v-yellow'),
   ].join('');
 
-  document.getElementById('kpi-chart-title').textContent = `% KPI per ${mode==='retail'?'Territory':'Distributor'} — ${mode==='retail'?'Retail':'Industri'} Jan–Jun 2026`;
+  document.getElementById('kpi-chart-title').textContent = `% KPI per ${mode==='retail'?'Territory':'Distributor'} — ${mode==='retail'?'Retail':'Industri'} ${_kpiPeriodLabel}`;
   document.getElementById('kpi-table-title').textContent = `Detail KPI per ${mode==='retail'?'Territory':'Distributor'} — ${mode==='retail'?'Retail':'Industri'}`;
 
-  // Main bar chart sorted by avg
-  const sorted = [...data].sort((a,b)=>b.avg-a.avg);
+  // Main bar chart sorted by avg (recalculated)
+  const sorted = [...data].sort((a,b)=>b._avgRecalc-a._avgRecalc);
   destroyChart('chart-kpi-main');
   _sisoCharts['chart-kpi-main'] = (function(){ const _ec = Chart.getChart(document.getElementById("chart-kpi-main")); if(_ec) _ec.destroy(); })();
  new Chart(document.getElementById("chart-kpi-main"), {
     type:'bar',
     data:{ labels: sorted.map(r=> mode==='retail' ? r.territory.replace('TERRITORY ','') : r.distributor.replace('PT. ','').slice(0,18)),
-      datasets:[{ label:'Avg KPI', data:sorted.map(r=>+(r.avg*100).toFixed(1)), backgroundColor:sorted.map(r=>pctC(r.avg)+'aa'), borderWidth:0 }]
+      datasets:[{ label:'Avg KPI', data:sorted.map(r=>+(r._avgRecalc*100).toFixed(1)), backgroundColor:sorted.map(r=>pctC(r._avgRecalc)+'aa'), borderWidth:0 }]
     },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:55}},
       plugins:{legend:{display:false}},
@@ -6811,7 +6884,7 @@ function buildKPI() {
     plugins:[{ id:'kpiBarLbl', afterDatasetsDraw(chart){
       const {ctx}=chart; const meta=chart.getDatasetMeta(0); ctx.save();
       meta.data.forEach((el,i)=>{
-        const val=sorted[i].avg;
+        const val=sorted[i]._avgRecalc;
         const {x,y}=el.tooltipPosition?el.tooltipPosition():{x:el.x,y:el.y};
         ctx.font='bold 10px Segoe UI,sans-serif'; ctx.fillStyle=pctC(val);
         ctx.textAlign='left'; ctx.textBaseline='middle';
@@ -6820,8 +6893,8 @@ function buildKPI() {
     }}]
   });
 
-  // Trend line - monthly average
-  const MONTHS_KPI = ['Jan','Feb','Mar','Apr','May','Jun'];
+  // Trend line - monthly average, sampai bulan terakhir yang ada datanya (dinamis)
+  const MONTHS_KPI = _kpiMonthNames.slice(0, _kpiLastIdx+1);
   const mAvg = MONTHS_KPI.map((_,i)=>+(data.reduce((s,r)=>s+(r.monthly[i]||0),0)/data.length*100).toFixed(2));
   destroyChart('chart-kpi-trend');
   _sisoCharts['chart-kpi-trend'] = (function(){ const _ec = Chart.getChart(document.getElementById("chart-kpi-trend")); if(_ec) _ec.destroy(); })();
@@ -6851,14 +6924,23 @@ function buildKPI() {
   });
 
 
+  // Table header dinamis (kolom bulan mengikuti data yang tersedia, bukan hardcode Jan-Jun)
+  var _kpiThead = document.getElementById('thead-kpi');
+  if (_kpiThead) {
+    var _monthThs = MONTHS_KPI.map(function(m){ return '<th class="right">'+m+'</th>'; }).join('');
+    var _deltaLabel = _kpiLastIdx >= 1 ? MONTHS_KPI[_kpiLastIdx-1]+'→'+MONTHS_KPI[_kpiLastIdx] : '-';
+    _kpiThead.innerHTML = '<tr><th>SAM/Position</th><th>Distributor</th><th>Territory</th>'+_monthThs+
+      '<th class="right">Δ '+_deltaLabel+'</th><th>Avg '+_kpiPeriodLabel.replace('Jan–','')+'</th></tr>';
+  }
+
   // Table
   document.getElementById('tbody-kpi').innerHTML = data.map(r=>{
-    const avg = r.avg;
+    const avg = r._avgRecalc;
     const ac = pctC(avg);
-    const mayVal = r.monthly[4] || 0;
-    const junVal = r.monthly[5] || 0;
-    const delta = junVal - mayVal;
-    const hasDelta = (r.monthly[4] !== undefined && r.monthly[4] !== null) && (r.monthly[5] !== undefined && r.monthly[5] !== null) && mayVal !== 0;
+    const prevVal = _kpiLastIdx>=1 ? (r.monthly[_kpiLastIdx-1] || 0) : 0;
+    const lastVal = r.monthly[_kpiLastIdx] || 0;
+    const delta = lastVal - prevVal;
+    const hasDelta = _kpiLastIdx>=1 && prevVal !== 0;
     const deltaColor = delta > 0 ? '#22c55e' : delta < 0 ? '#f87171' : '#8892a4';
     const deltaArrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '–';
     const deltaText = hasDelta ? deltaArrow + ' ' + Math.abs(delta*100).toFixed(1) + '%' : '-';
@@ -6866,7 +6948,7 @@ function buildKPI() {
       <td style="font-size:11px">${r[samKey]}</td>
       <td style="font-size:11px">${r.distributor}</td>
       <td style="font-size:11px;color:var(--muted)">${r[nameKey]||''}</td>
-      ${r.monthly.slice(0,6).map(v=>`<td class="right" style="color:${pctC(v)};font-weight:700">${v?((v*100).toFixed(1)+'%'):'-'}</td>`).join('')}
+      ${r.monthly.slice(0,_kpiLastIdx+1).map(v=>`<td class="right" style="color:${pctC(v)};font-weight:700">${v?((v*100).toFixed(1)+'%'):'-'}</td>`).join('')}
       <td class="right" style="color:${deltaColor};font-weight:700">${deltaText}</td>
       <td>${pctBar(avg)}</td>
     </tr>`;
